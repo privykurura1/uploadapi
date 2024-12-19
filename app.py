@@ -1,6 +1,6 @@
 import os
 import json
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
@@ -63,11 +63,11 @@ def add_article():
     with open(article_file_path, 'w') as article_file:
         article_file.write(f"Title: {article_title}\n\n{article_content}")
 
-    # Store article metadata
+    # Store article metadata with the link to the file
     article_metadata = {
         'type': 'article',
         'title': article_title,
-        'file_path': article_file_path
+        'link': f'/uploads/articles/{article_filename}'  # Provide a URL to fetch the article
     }
 
     uploads_data.append(article_metadata)
@@ -89,23 +89,26 @@ def get_uploads():
             metadata = json.load(f)
             all_uploads.append(metadata)
 
-    # Load article files (stored as text files)
+    # Load article metadata and link to the article files
     article_files = [
         f for f in os.listdir(app.config['ARTICLE_UPLOAD_FOLDER'])
         if f.endswith('.txt')
     ]
     for article_file in article_files:
-        with open(os.path.join(app.config['ARTICLE_UPLOAD_FOLDER'], article_file), 'r') as f:
-            content = f.read()
         title = article_file.rsplit('.', 1)[0]  # Use filename as title
         article_metadata = {
             'type': 'article',
             'title': title,
-            'content': content
+            'link': f'/uploads/articles/{article_file}'  # Provide a URL to access the article
         }
         all_uploads.append(article_metadata)
 
     return jsonify({'uploads': all_uploads})
+
+# Serve the article files (as text)
+@app.route('/uploads/articles/<filename>')
+def serve_article(filename):
+    return send_from_directory(app.config['ARTICLE_UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     # Bind to all available interfaces to allow access from other devices on the network
