@@ -99,15 +99,11 @@
         <button type="submit">Add YouTube Video</button>
     </form>
 
-    <!-- Add Article Form -->
+    <!-- Add Article URL Form -->
     <form action="/add_article" method="post">
-        <label for="title">Article Title:</label>
-        <input type="text" name="title" id="title" placeholder="Enter article title" required>
-
-        <label for="content">Article Content:</label>
-        <textarea name="content" id="content" rows="5" placeholder="Enter article content" required></textarea>
-
-        <button type="submit">Upload Article</button>
+        <label for="article_url">Enter Article URL:</label>
+        <input type="url" name="article_url" id="article_url" placeholder="https://mpkcomteck.com/articles/..." required>
+        <button type="submit">Add Article</button>
     </form>
 
     <h2>Uploaded Content:</h2>
@@ -116,10 +112,9 @@
             {% for upload in uploads %}
                 <li>
                     {% if upload.type == 'youtube' %}
-                        YouTube Video: <a href="{{ upload.youtube_url }}" target="_blank">{{ upload.youtube_url }}</a>
+                        YouTube Video: <a href="{{ upload.url }}" target="_blank">{{ upload.url }}</a>
                     {% elif upload.type == 'article' %}
-                        Article: <strong>{{ upload.title }}</strong><br>
-                        <pre>{{ upload.content }}</pre>
+                        Article: <a href="{{ upload.url }}" target="_blank">{{ upload.url }}</a>
                     {% endif %}
                 </li>
             {% endfor %}
