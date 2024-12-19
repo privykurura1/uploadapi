@@ -8,21 +8,13 @@ app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
 # Define upload folders
-app.config['VIDEO_UPLOAD_FOLDER'] = 'uploads/videos'
-app.config['DOCUMENT_UPLOAD_FOLDER'] = 'uploads/documents'
+app.config['ARTICLE_UPLOAD_FOLDER'] = 'uploads/articles'
 app.config['YOUTUBE_URL_FOLDER'] = 'uploads/youtube'
-app.config['ALLOWED_VIDEO_EXTENSIONS'] = {'mp4', 'mov', 'avi', 'flv'}
-app.config['ALLOWED_DOCUMENT_EXTENSIONS'] = {'pdf', 'txt', 'docx'}
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # Max size 50 MB
 
 # Create necessary directories if they don't exist
-os.makedirs(app.config['VIDEO_UPLOAD_FOLDER'], exist_ok=True)
-os.makedirs(app.config['DOCUMENT_UPLOAD_FOLDER'], exist_ok=True)
+os.makedirs(app.config['ARTICLE_UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['YOUTUBE_URL_FOLDER'], exist_ok=True)
-
-# Helper function to check allowed file extensions
-def allowed_file(filename, allowed_extensions):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
 # Store uploaded files and URLs in memory for now
 uploads_data = []
@@ -31,42 +23,6 @@ uploads_data = []
 @app.route('/')
 def index():
     return render_template('upload_file.html', uploads=uploads_data)
-
-# Route to upload video files
-@app.route('/upload_video', methods=['POST'])
-def upload_video():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    if file and allowed_file(file.filename, app.config['ALLOWED_VIDEO_EXTENSIONS']):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['VIDEO_UPLOAD_FOLDER'], filename))
-        uploads_data.append({'type': 'video', 'filename': filename})
-        return render_template('upload_file.html', uploads=uploads_data)
-
-    return jsonify({'error': 'File type not allowed'}), 400
-
-# Route to upload document files (PDF, DOCX)
-@app.route('/upload_document', methods=['POST'])
-def upload_document():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
-
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
-
-    if file and allowed_file(file.filename, app.config['ALLOWED_DOCUMENT_EXTENSIONS']):
-        filename = secure_filename(file.filename)
-        file.save(os.path.join(app.config['DOCUMENT_UPLOAD_FOLDER'], filename))
-        uploads_data.append({'type': 'document', 'filename': filename})
-        return render_template('upload_file.html', uploads=uploads_data)
-
-    return jsonify({'error': 'File type not allowed'}), 400
 
 # Route to add YouTube video URL
 @app.route('/add_youtube_video', methods=['POST'])
@@ -91,32 +47,36 @@ def add_youtube_video():
     uploads_data.append(youtube_metadata)
     return render_template('upload_file.html', uploads=uploads_data)
 
+# Route to add article notes
+@app.route('/add_article', methods=['POST'])
+def add_article():
+    article_title = request.form.get('title')
+    article_content = request.form.get('content')
+
+    if not article_title or not article_content:
+        return jsonify({'error': 'Article title and content are required'}), 400
+
+    # Save article as a text file
+    article_filename = secure_filename(f'{article_title}.txt')
+    article_file_path = os.path.join(app.config['ARTICLE_UPLOAD_FOLDER'], article_filename)
+
+    with open(article_file_path, 'w') as article_file:
+        article_file.write(f"Title: {article_title}\n\n{article_content}")
+
+    # Store article metadata
+    article_metadata = {
+        'type': 'article',
+        'title': article_title,
+        'file_path': article_file_path
+    }
+
+    uploads_data.append(article_metadata)
+    return render_template('upload_file.html', uploads=uploads_data)
+
 # Route to fetch all uploads
 @app.route('/get_uploads', methods=['GET'])
 def get_uploads():
     all_uploads = []
-
-    # Load video files
-    video_files = [
-        f for f in os.listdir(app.config['VIDEO_UPLOAD_FOLDER'])
-        if allowed_file(f, app.config['ALLOWED_VIDEO_EXTENSIONS'])
-    ]
-    for video_file in video_files:
-        all_uploads.append({
-            'type': 'video',
-            'filename': video_file
-        })
-
-    # Load document files
-    document_files = [
-        f for f in os.listdir(app.config['DOCUMENT_UPLOAD_FOLDER'])
-        if allowed_file(f, app.config['ALLOWED_DOCUMENT_EXTENSIONS'])
-    ]
-    for document_file in document_files:
-        all_uploads.append({
-            'type': 'document',
-            'filename': document_file
-        })
 
     # Load YouTube metadata from files to include in the response
     youtube_files = [
@@ -128,6 +88,22 @@ def get_uploads():
         with open(youtube_file, 'r') as f:
             metadata = json.load(f)
             all_uploads.append(metadata)
+
+    # Load article files (stored as text files)
+    article_files = [
+        f for f in os.listdir(app.config['ARTICLE_UPLOAD_FOLDER'])
+        if f.endswith('.txt')
+    ]
+    for article_file in article_files:
+        with open(os.path.join(app.config['ARTICLE_UPLOAD_FOLDER'], article_file), 'r') as f:
+            content = f.read()
+        title = article_file.rsplit('.', 1)[0]  # Use filename as title
+        article_metadata = {
+            'type': 'article',
+            'title': title,
+            'content': content
+        }
+        all_uploads.append(article_metadata)
 
     return jsonify({'uploads': all_uploads})
 

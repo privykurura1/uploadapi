@@ -34,8 +34,9 @@
             font-weight: bold;
         }
 
-        form input[type="file"],
-        form input[type="url"] {
+        form input[type="url"],
+        form input[type="text"],
+        form textarea {
             width: 100%;
             padding: 8px;
             margin-bottom: 15px;
@@ -89,21 +90,7 @@
     </style>
 </head>
 <body>
-    <h1>Upload Your Files</h1>
-
-    <!-- Upload Video Form -->
-    <form action="/upload_video" method="post" enctype="multipart/form-data">
-        <label for="video">Upload Video (MP4, MOV, etc.):</label>
-        <input type="file" name="file" id="video" accept="video/*" required>
-        <button type="submit">Upload Video</button>
-    </form>
-
-    <!-- Upload Document Form -->
-    <form action="/upload_document" method="post" enctype="multipart/form-data">
-        <label for="document">Upload Document (PDF, DOCX, etc.):</label>
-        <input type="file" name="file" id="document" accept=".pdf, .docx, .txt" required>
-        <button type="submit">Upload Document</button>
-    </form>
+    <h1>Upload Your Content</h1>
 
     <!-- Add YouTube Video URL Form -->
     <form action="/add_youtube_video" method="post">
@@ -112,17 +99,27 @@
         <button type="submit">Add YouTube Video</button>
     </form>
 
+    <!-- Add Article Form -->
+    <form action="/add_article" method="post">
+        <label for="title">Article Title:</label>
+        <input type="text" name="title" id="title" placeholder="Enter article title" required>
+
+        <label for="content">Article Content:</label>
+        <textarea name="content" id="content" rows="5" placeholder="Enter article content" required></textarea>
+
+        <button type="submit">Upload Article</button>
+    </form>
+
     <h2>Uploaded Content:</h2>
     <ul>
         {% if uploads %}
             {% for upload in uploads %}
                 <li>
-                    {% if upload.type == 'video' %}
-                        Video: <a href="{{ url_for('static', filename='videos/' + upload.filename) }}" target="_blank">{{ upload.filename }}</a>
-                    {% elif upload.type == 'document' %}
-                        Document: <a href="{{ url_for('static', filename='documents/' + upload.filename) }}" target="_blank">{{ upload.filename }}</a>
-                    {% elif upload.type == 'youtube' %}
+                    {% if upload.type == 'youtube' %}
                         YouTube Video: <a href="{{ upload.youtube_url }}" target="_blank">{{ upload.youtube_url }}</a>
+                    {% elif upload.type == 'article' %}
+                        Article: <strong>{{ upload.title }}</strong><br>
+                        <pre>{{ upload.content }}</pre>
                     {% endif %}
                 </li>
             {% endfor %}
